@@ -9,6 +9,9 @@ namespace NoNFT_Bot;
 
 internal static class Program
 {
+    private static readonly Regex NFT_Spam
+        = new(@"(nft|claim|hurry|degens)(\S*\s*)*https:\/\/", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     public static void Main(string[] args)
     {
         try
@@ -85,7 +88,7 @@ internal static class Program
         var text = message.Caption ?? message.Text;
         if (text is null) return;
 
-        if (Regex.IsMatch(text, @"(nft|claim|hurry|degens)(\S*\s*)*https:\/\/", RegexOptions.IgnoreCase))
+        if (NFT_Spam.IsMatch(text))
         {
             var chat = message.Chat.Id;
             var title = message.Chat.Title ?? string.Empty;
