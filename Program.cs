@@ -17,22 +17,19 @@ internal static class Program
         try
         {
             var bot = new TelegramBotClient(File.ReadAllText("token").Trim());
-
             LogEnter(bot);
 
             var options = new ReceiverOptions
             {
                 AllowedUpdates = [UpdateType.Message, UpdateType.EditedMessage]
             };
-
             bot.StartReceiving(HandleUpdate, HandlePollingError, options);
 
             WaitForExit();
         }
         catch (Exception e)
         {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"MAIN LOOP >> MEGA BRUH -> {e.Message}");
+            Log($"MAIN LOOP >> MEGA BRUH -> {e.Message}", ConsoleColor.Red);
             Console.ReadKey();
         }
     }
@@ -41,8 +38,7 @@ internal static class Program
     {
         var me = bot.GetMeAsync().Result;
 
-        Console.ForegroundColor = ConsoleColor.Yellow;
-        Console.WriteLine($"MAIN LOOP >> ENTERING AS [{me.FirstName}] / @{me.Username}");
+        Log($"MAIN LOOP >> ENTERING AS [{me.FirstName}] / @{me.Username}", ConsoleColor.Yellow);
     }
 
     private static void WaitForExit()
@@ -53,7 +49,6 @@ internal static class Program
             Console.ResetColor();
             input = Console.ReadKey();
         }
-        
     }
 
     private static Task HandleUpdate(ITelegramBotClient bot, Update update, CancellationToken token)
@@ -73,11 +68,8 @@ internal static class Program
         }
         catch (Exception exception)
         {
-            var chat = message.Chat.Id;
-            var title = message.Chat.Title ?? string.Empty;
-
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"{chat} / {title} >> BRUH -> {exception.Message}");
+            var (chat, title) = GetChatAndTitle(message);
+            Log($"{chat} / {title} >> BRUH -> {exception.Message}", ConsoleColor.Red);
         }
     }
 
@@ -90,21 +82,15 @@ internal static class Program
 
         if (NFT_Spam.IsMatch(text))
         {
-            var chat = message.Chat.Id;
-            var title = message.Chat.Title ?? string.Empty;
+            var (chat, title) = GetChatAndTitle(message);
 
-            Console.ResetColor();
-            Console.WriteLine($"{chat} / {title} >> NFT SPAM DETECTED");
-
-            Console.ForegroundColor = ConsoleColor.Blue;
-            Console.WriteLine($"{chat} / {title} >> {text}");
+            Log($"{chat} / {title} >> NFT SPAM DETECTED", ConsoleColor.Gray);
+            Log($"{chat} / {title} >> {text}", ConsoleColor.Blue);
 
             var member = await bot.GetChatMemberAsync(message.Chat.Id, message.From.Id);
             if (member.Status is not ChatMemberStatus.Administrator and not ChatMemberStatus.Member)
             {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine($"{chat} / {title} >> DELETING NFT SPAM!"); ;
-
+                Log($"{chat} / {title} >> DELETING NFT SPAM!", ConsoleColor.Yellow);
                 await bot.DeleteMessageAsync(message.Chat.Id, message.MessageId);
             }
         }
@@ -112,9 +98,15 @@ internal static class Program
 
     private static Task HandlePollingError(ITelegramBotClient bot, Exception exception, CancellationToken token)
     {
-        Console.ForegroundColor = ConsoleColor.Red;
-        Console.WriteLine($"Telegram API Error x_x --> {exception.Message}");
-
+        Log($"Telegram API Error x_x --> {exception.Message}", ConsoleColor.Red);
         return Task.CompletedTask;
+    }
+
+    private static (long, string) GetChatAndTitle(Message m) => (m.Chat.Id, m.Chat.Title ?? string.Empty);
+
+    private static void Log(string message, ConsoleColor color)
+    {
+        Console.ForegroundColor = color;
+        Console.WriteLine(message);
     }
 }
