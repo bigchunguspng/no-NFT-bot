@@ -10,7 +10,7 @@ namespace NoNFT_Bot;
 internal static class Program
 {
     private static readonly Regex NFT_Spam
-        = new(@"(nft|claim|hurry|degens)(\S*\s*)*https:\/\/", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        = new(@"(nft|claim|hurry|degens|быстрее|заходите)(\S*\s*)*https?:\/\/", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     public static void Main(string[] args)
     {
