@@ -1,4 +1,5 @@
-﻿using Telegram.Bot;
+﻿using System.Runtime.CompilerServices;
+using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -21,6 +22,8 @@ internal static class Program
         """;
 
     #region BOILER
+
+    // MAIN
 
     public static void Main(string[] args)
     {
@@ -61,6 +64,8 @@ internal static class Program
         }
     }
 
+    // POLLING
+
     private static Task HandleUpdate(ITelegramBotClient bot, Update update, CancellationToken token)
     {
         return update switch
@@ -100,20 +105,31 @@ internal static class Program
         return Task.CompletedTask;
     }
 
+    // LOGS
+
+    private static (long, string) GetChatAndTitle(Message m) => (m.Chat.Id, m.Chat.Title ?? string.Empty);
+
+    [MethodImpl(MethodImplOptions.Synchronized)]
     private static void Log(string message, ConsoleColor color)
     {
+        Console.ForegroundColor = ConsoleColor.DarkGray;
+        Console.Write($"[{DateTime.Now:MM'/'dd' 'HH:mm:ss.fff}]\n\t");
         Console.ForegroundColor = color;
-        Console.WriteLine($"[{DateTime.Now:MM'/'dd' 'HH:mm:ss.fff}]\n\t{message}");
+        Console.WriteLine(message);
     }
 
+    [MethodImpl(MethodImplOptions.Synchronized)]
     private static void Log(long chat, string title, string message, ConsoleColor color)
     {
+        Console.ForegroundColor = ConsoleColor.DarkGray;
+        Console.Write($"[{DateTime.Now:MM'/'dd' 'HH:mm:ss.fff}] - [{chat} / {title}]\n\t");
         Console.ForegroundColor = color;
-        Console.WriteLine($"[{DateTime.Now:MM'/'dd' 'HH:mm:ss.fff}] - [{chat} / {title}]\n\t{message}");
+        Console.WriteLine(message);
     }
 
     #endregion
 
+    // DATA
 
     private const string IS_THAT_NFT_SPAM = "AgACAgIAAyEFAASSkTL6AAMKZ1ckuJR4buJzFwKx23WvMR-uxIIAAhXlMRtXsrhKVnGvavMiFMwBAAMCAAN5AAM2BA";
 
@@ -128,6 +144,8 @@ internal static class Program
         "NFT", "claim", "hurry", "degens"
     ];
 
+    // LOGIC
+
     private static async Task OnMessageInternal(Message message, ITelegramBotClient bot)
     {
         // SKIP technical messages
@@ -140,7 +158,7 @@ internal static class Program
         var text = message.Caption ?? message.Text;
         if (text is null) return;
 
-        if (text.HasSussyURL(message) && text.TextIsSussy())
+        if (message.GetURLs() is { } urls && (text.HasSussyURL(urls) || text.TextIsSussy()))
         {
             var (chat, title) = GetChatAndTitle(message);
 
@@ -148,20 +166,19 @@ internal static class Program
 
             Log(chat, title, $"{message.Id} <- SUSSY MESSAGE", ConsoleColor.Gray);
 
-
             if (user is { IsBot: true, Username: "Channel_Bot" or "GroupAnonymousBot" }) return;
 
             var member = await bot.GetChatMember(message.Chat.Id, user.Id);
-            if (member.Status is ChatMemberStatus.Member or ChatMemberStatus.Administrator) return;
+            if (member.Status is ChatMemberStatus.Member or ChatMemberStatus.Administrator or ChatMemberStatus.Creator) return;
 
-            Log(chat, title, $"{message.Id} <- MESSAGE FROM IMPOSTER", ConsoleColor.Gray);
+            Log(chat, title, $"{message.Id} <- MESSAGE FROM THE IMPOSTER", ConsoleColor.Gray);
 
             // PROMPT USER(s) FOR ACTION
 
             var guid = Guid.NewGuid();
 
             Log(chat, title, $"{message.Id} >> {text}", ConsoleColor.Blue);
-            Log(chat, title, $"{message.Id} >> added to QUARANTINE as [{guid}]", ConsoleColor.Yellow);
+            Log(chat, title, $"{message.Id} >> added to QUARANTINE", ConsoleColor.Yellow);
 
             var picture = InputFile.FromFileId(IS_THAT_NFT_SPAM);
             var replyTo = new ReplyParameters() { MessageId = message.Id };
@@ -219,13 +236,20 @@ internal static class Program
         }
     }
 
-    private static bool TextIsSussy(this string text) => _keywordsText.Any(text.Contains);
+    // KOWALSKI ANALYSIS
 
-    private static bool HasSussyURL(this string text, Message message)
+    private static IEnumerable<MessageEntity> GetURLs(this Message message)
     {
         var entities = message.Entities;
-        if (entities is null) return false;
+        if (entities is null) return [];
 
+        return entities.Where(x => x.Type is MessageEntityType.Url or MessageEntityType.TextLink);
+    }
+
+    private static bool TextIsSussy(this string text) => _keywordsText.Any(text.Contains);
+
+    private static bool HasSussyURL(this string text, IEnumerable<MessageEntity> entities)
+    {
         foreach (var entity in entities)
         {
             var url = entity.Type switch
@@ -235,13 +259,11 @@ internal static class Program
                 _ => null
             };
 
-            if (url is null) return false;
+            if (url is null) continue;
 
             if (_keywordsUrl.Any(x => url.Contains(x))) return true;
         }
 
         return false;
     }
-
-    private static (long, string) GetChatAndTitle(Message m) => (m.Chat.Id, m.Chat.Title ?? string.Empty);
 }
