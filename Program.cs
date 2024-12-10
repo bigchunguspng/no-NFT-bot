@@ -133,15 +133,18 @@ internal static class Program
 
     private const string IS_THAT_NFT_SPAM = "AgACAgIAAyEFAASSkTL6AAMKZ1ckuJR4buJzFwKx23WvMR-uxIIAAhXlMRtXsrhKVnGvavMiFMwBAAMCAAN5AAM2BA";
 
-    private record DeleteRequest(long Chat, int MessageSpam, int MessageQuestion, string Title);
+    private record DeleteRequest(long Chat, string Title, User User, int MessageSpam, int MessageQuestion);
 
     private static readonly Dictionary<Guid, DeleteRequest> _requests = new();
 
     private static readonly List<string> _keywordsUrl  = [".io/", "opensea", "fluff", "drop"];
+
     private static readonly List<string> _keywordsText =
     [
-        "\u2063", "\u2062", "\u200c",
-        "NFT", "claim", "hurry", "degens"
+        "\u200b", "\u200c", "\u200d",
+        "\u2060", "\u2061", "\u2062",
+        "\u2063", "\u2064", "\u2068",
+        "NFT", "claim", "ASAP", "hurry", "degens"
     ];
 
     // LOGIC
@@ -166,10 +169,7 @@ internal static class Program
 
             Log(chat, title, $"{message.Id} <- SUSSY MESSAGE", ConsoleColor.Gray);
 
-            if (user is { IsBot: true, Username: "Channel_Bot" or "GroupAnonymousBot" }) return;
-
-            var member = await bot.GetChatMember(message.Chat.Id, user.Id);
-            if (member.Status is ChatMemberStatus.Member or ChatMemberStatus.Administrator or ChatMemberStatus.Creator) return;
+            if (await user.IsGoodGuy(chat, bot)) return;
 
             Log(chat, title, $"{message.Id} <- MESSAGE FROM THE IMPOSTER", ConsoleColor.Gray);
 
@@ -189,7 +189,7 @@ internal static class Program
 
             var question = await bot.SendPhoto(chat, picture, replyParameters: replyTo, replyMarkup: buttons);
 
-            _requests.Add(guid, new DeleteRequest(chat, message.Id, question.Id, title));
+            _requests.Add(guid, new DeleteRequest(chat, title, user, message.Id, question.Id));
 
             WaitAndDeleteSpam(bot, guid);
         }
@@ -199,14 +199,21 @@ internal static class Program
     {
         await Task.Delay(30_000);
 
-        if (_requests.Remove(guid, out var request))
+        try // async void moment
         {
-            var (chat, title) = (request.Chat, request.Title);
+            if (_requests.Remove(guid, out var request))
+            {
+                var (chat, title) = (request.Chat, request.Title);
 
-            Log(chat, title, $"{request.MessageSpam} >> DELETING NFT SPAM! (30s passed)", ConsoleColor.Magenta);
+                Log(chat, title, $"{request.MessageSpam} >> DELETING NFT SPAM! (30s passed)", ConsoleColor.Magenta);
 
-            await bot.DeleteMessage(request.Chat, request.MessageQuestion);
-            await bot.DeleteMessage(request.Chat, request.MessageSpam);
+                await bot.DeleteMessage(request.Chat, request.MessageQuestion);
+                await bot.DeleteMessage(request.Chat, request.MessageSpam);
+            }
+        }
+        catch (Exception e)
+        {
+            Log(e.ToString(), ConsoleColor.Red);
         }
     }
 
@@ -215,24 +222,38 @@ internal static class Program
         var data = callback.Data;
         if (data is null) return;
 
-        var guid = Guid.Parse(data.Split(' ')[1]);
+        var args = data.Split(' ');
+        var guid = Guid.Parse(args[1]);
 
-        if (_requests.Remove(guid, out var request))
+        if (_requests.TryGetValue(guid, out var request) == false) return;
+
+        var (chat, title) = (request.Chat, request.Title);
+
+        var user = callback.From;
+        var name = user.FirstName;
+
+        var userWillMatters = user.Id == request.User.Id || await user.CanBeatGoku(chat, bot);
+        if (userWillMatters == false)
         {
-            var (chat, title) = (request.Chat, request.Title);
+            Log(chat, title, $"{request.MessageSpam} >> VOTE [{args[0]}] FROM {name} (unaccepted)", ConsoleColor.DarkGray);
+            return;
+        }
 
-            await bot.DeleteMessage(request.Chat, request.MessageQuestion);
+        // CHECKS PASSED
 
-            if (data.StartsWith("Y"))
-            {
-                Log(chat, title, $"{request.MessageSpam} >> DELETING NFT SPAM! (marked as spam)", ConsoleColor.Magenta);
+        _requests.Remove(guid);
 
-                await bot.DeleteMessage(request.Chat, request.MessageSpam);
-            }
-            else // "N"
-            {
-                Log(chat, title, $"{request.MessageSpam} >> MESSAGE KEPT! (marked as not spam)", ConsoleColor.Green);
-            }
+        await bot.DeleteMessage(request.Chat, request.MessageQuestion);
+
+        if (data.StartsWith("Y"))
+        {
+            Log(chat, title, $"{request.MessageSpam} >> DELETING NFT SPAM! (marked as spam by {name})", ConsoleColor.Magenta);
+
+            await bot.DeleteMessage(request.Chat, request.MessageSpam);
+        }
+        else // "N"
+        {
+            Log(chat, title, $"{request.MessageSpam} >> MESSAGE KEPT! (marked as not spam by {name})", ConsoleColor.Green);
         }
     }
 
@@ -265,5 +286,21 @@ internal static class Program
         }
 
         return false;
+    }
+
+    private static async Task<bool> IsGoodGuy(this User user, long chat, ITelegramBotClient bot)
+    {
+        if (user is { IsBot: true, Username: "Channel_Bot" or "GroupAnonymousBot" }) return true;
+
+        var    member = await bot.GetChatMember(chat, user.Id);
+        return member.Status is ChatMemberStatus.Member or ChatMemberStatus.Administrator or ChatMemberStatus.Creator;
+    }
+
+    private static async Task<bool> CanBeatGoku(this User user, long chat, ITelegramBotClient bot)
+    {
+        if (user is { IsBot: true, Username: "Channel_Bot" or "GroupAnonymousBot" }) return true;
+
+        var    member = await bot.GetChatMember(chat, user.Id);
+        return member.Status is ChatMemberStatus.Administrator or ChatMemberStatus.Creator;
     }
 }
