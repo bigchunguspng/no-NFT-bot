@@ -259,12 +259,13 @@ internal static class Program
 
     // KOWALSKI ANALYSIS
 
-    private static IEnumerable<MessageEntity> GetURLs(this Message message)
+    private static List<MessageEntity>? GetURLs(this Message message)
     {
         var entities = message.Entities;
-        if (entities is null) return [];
+        if (entities is null) return null;
 
-        return entities.Where(x => x.Type is MessageEntityType.Url or MessageEntityType.TextLink);
+        var urls = entities.Where(x => x.Type is MessageEntityType.Url or MessageEntityType.TextLink).ToList();
+        return urls.Count == 0 ? null : urls;
     }
 
     private static bool TextIsSussy(this string text) => _keywordsText.Any(text.Contains);
@@ -290,6 +291,7 @@ internal static class Program
 
     private static async Task<bool> IsGoodGuy(this User user, long chat, ITelegramBotClient bot)
     {
+        if (user is { Id: 777000, FirstName: "Telegram" }) return true;
         if (user is { IsBot: true, Username: "Channel_Bot" or "GroupAnonymousBot" }) return true;
 
         var    member = await bot.GetChatMember(chat, user.Id);
