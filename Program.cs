@@ -261,7 +261,7 @@ internal static class Program
 
     private static List<MessageEntity>? GetURLs(this Message message)
     {
-        var entities = message.Entities;
+        var entities = message.Entities ?? message.CaptionEntities;
         if (entities is null) return null;
 
         var urls = entities.Where(x => x.Type is MessageEntityType.Url or MessageEntityType.TextLink).ToList();
