@@ -137,14 +137,15 @@ internal static class Program
 
     private static readonly Dictionary<Guid, DeleteRequest> _requests = new();
 
-    private static readonly List<string> _keywordsUrl  = [".io/", "opensea", "fluff", "drop"];
+    private static readonly List<string> _keywordsUrl  = [".io/", ".xyz/", "opensea", "fluff", "drop", "claim", "kaito"];
 
     private static readonly List<string> _keywordsText =
     [
         "\u200b", "\u200c", "\u200d",
         "\u2060", "\u2061", "\u2062",
         "\u2063", "\u2064", "\u2068",
-        "NFT", "claim", "ASAP", "hurry", "degens"
+        "NFT", "claim", "ASAP", "hurry", "degens",
+        "токен", "аирдроп", "кошелек", "крипто"
     ];
 
     // LOGIC
