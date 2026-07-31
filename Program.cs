@@ -137,7 +137,10 @@ internal static class Program
 
     private static readonly Dictionary<Guid, DeleteRequest> _requests = new();
 
-    private static readonly List<string> _keywordsUrl  = [".io/", ".xyz/", "opensea", "fluff", "drop", "claim", "kaito"];
+    private static readonly List<string> _keywordsUrl  =
+    [
+        ".io/", ".xyz/", "opensea", "fluff", "drop", "claim", "kaito", ".app"
+    ];
 
     private static readonly List<string> _keywordsText =
     [
@@ -145,7 +148,8 @@ internal static class Program
         "\u2060", "\u2061", "\u2062",
         "\u2063", "\u2064", "\u2068",
         "NFT", "claim", "ASAP", "hurry", "degens",
-        "токен", "аирдроп", "кошелек", "крипто"
+        "токен", "аирдроп", "кошелек", "крипто",
+        "offer", "bonus", "claim", "promo", "earn", "cash", "reward"
     ];
 
     // LOGIC
@@ -269,7 +273,8 @@ internal static class Program
         return urls.Count == 0 ? null : urls;
     }
 
-    private static bool TextIsSussy(this string text) => _keywordsText.Any(text.Contains);
+    private static bool TextIsSussy(this string text)
+        => _keywordsText.Any(x => text.Contains(x, StringComparison.OrdinalIgnoreCase));
 
     private static bool HasSussyURL(this string text, IEnumerable<MessageEntity> entities)
     {
@@ -284,7 +289,7 @@ internal static class Program
 
             if (url is null) continue;
 
-            if (_keywordsUrl.Any(x => url.Contains(x))) return true;
+            if (_keywordsUrl.Any(x => url.Contains(x, StringComparison.OrdinalIgnoreCase))) return true;
         }
 
         return false;
