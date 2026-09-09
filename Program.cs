@@ -149,7 +149,8 @@ internal static class Program
         "\u2063", "\u2064", "\u2068",
         "NFT", "claim", "ASAP", "hurry", "degens",
         "токен", "аирдроп", "кошелек", "крипто",
-        "offer", "bonus", "claim", "promo", "earn", "cash", "reward"
+        "offer", "bonus", "claim", "promo", "earn", "cash", "reward",
+        "ᛖΘΛ0ԿKO"
     ];
 
     // LOGIC
